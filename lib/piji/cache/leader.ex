@@ -3,6 +3,8 @@ defmodule Piji.Cache.Leader do
 
   use GenServer
 
+  require Logger
+
   alias Piji.Cache.{Follower, State}
 
   @doc false
@@ -10,8 +12,21 @@ defmodule Piji.Cache.Leader do
     GenServer.start_link(__MODULE__, State.new(id))
   end
 
+  @doc """
+  Gets data from the leader.
+  """
+  def get_data(pid) do
+    GenServer.call(pid, :get_data)
+  end
+
+  def replicate(pid, state) do
+    GenServer.cast(pid, {:replicate, state})
+  end
+
   @impl true
   def init(state) do
+    Logger.info("Starting leader for #{state.id}")
+
     {:ok, state, {:continue, :join}}
   end
 
@@ -27,8 +42,8 @@ defmodule Piji.Cache.Leader do
           {Follower, state}
         ])
 
-      list ->
-        nil
+      followers ->
+        Enum.each(followers, &replicate(&1, state))
     end
 
     :pg.join(state.id, self())
@@ -37,9 +52,8 @@ defmodule Piji.Cache.Leader do
   end
 
   @impl true
-  def handle_cast(:hey, state) do
-    IO.inspect(self(), label: "Hi from Leader: ")
-    {:noreply, state}
+  def handle_call(:get_data, _from, state) do
+    {:reply, state.data, state}
   end
 
   # Get most recent copy
