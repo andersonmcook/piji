@@ -1,7 +1,7 @@
 defmodule Piji.Cache.Follower do
   @moduledoc false
 
-  use GenServer
+  use GenServer, restart: :transient
 
   require Logger
 
@@ -17,13 +17,6 @@ defmodule Piji.Cache.Follower do
   """
   def get_data(pid) do
     GenServer.call(pid, :get_data)
-  end
-
-  @doc """
-  Stops follower when cache is no longer needed.
-  """
-  def stop(pid) do
-    GenServer.cast(pid, :stop)
   end
 
   @impl true
@@ -45,9 +38,7 @@ defmodule Piji.Cache.Follower do
     {:noreply, state}
   end
 
-  def handle_cast(:stop, state) do
-    Logger.info("Stopping follower for #{state.id}")
-
-    {:stop, :normal, state}
+  def handle_cast({:update, data, updated_at}, state) do
+    {:noreply, %{state | data: data, updated_at: updated_at}}
   end
 end

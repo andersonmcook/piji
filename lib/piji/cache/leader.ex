@@ -1,11 +1,13 @@
 defmodule Piji.Cache.Leader do
   @moduledoc false
 
-  use GenServer
+  use GenServer, restart: :transient
 
   require Logger
 
   alias Piji.Cache.{Follower, State}
+
+  @data_store Map.new(1..3, &{&1, :rand.uniform()})
 
   @doc false
   def start_link(id) do
@@ -25,16 +27,20 @@ defmodule Piji.Cache.Leader do
 
   @impl true
   def init(state) do
-    Logger.info("Starting leader for #{state.id}")
+    case fetch_data(state.id) do
+      :no_record ->
+        Logger.info("No data for ID: #{state.id}")
+        {:stop, :no_data}
 
-    {:ok, state, {:continue, :join}}
+      data ->
+        Logger.info("Starting leader for #{state.id}")
+        state = %{state | data: data, updated_at: DateTime.utc_now()}
+        {:ok, state, {:continue, :join}}
+    end
   end
 
   @impl true
   def handle_continue(:join, state) do
-    state = %{state | data: fetch_data(state.id), updated_at: DateTime.utc_now()}
-
-    # maybe we have a configured min/max replicas
     case :pg.get_members(state.id) do
       [] ->
         :rpc.multicall(DynamicSupervisor, :start_child, [
@@ -56,8 +62,13 @@ defmodule Piji.Cache.Leader do
     {:reply, state.data, state}
   end
 
-  # Get most recent copy
-  defp fetch_data(_id) do
-    %{make_ref() => make_ref()}
+  @impl true
+  def handle_cast({:update, data, updated_at}, state) do
+    {:noreply, %{state | data: data, updated_at: updated_at}}
+  end
+
+  # Dummy data
+  defp fetch_data(id) do
+    Map.get(@data_store, id, :no_record)
   end
 end
