@@ -8,7 +8,8 @@ defmodule Piji.Application do
     children = [
       {Cluster.Supervisor, [topologies(), [name: Piji.ClusterSupervisor]]},
       %{id: Piji.ProcessGroup, start: {:pg, :start_link, []}},
-      {DynamicSupervisor, strategy: :one_for_one, name: Piji.DynamicSupervisor}
+      {DynamicSupervisor, strategy: :one_for_one, name: Piji.DynamicSupervisor},
+      Piji.Connector
     ]
 
     opts = [strategy: :one_for_one, name: Piji.Supervisor]
