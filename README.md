@@ -1,6 +1,22 @@
 # Piji
 
-**TODO: Add description**
+Distributed cache using Erlang's `pg`.
+
+## Plan to remove Leader/Follower
+
+There may be no need to make this distinction.
+
+Have a `Worker` module that does it all.
+
+How do you know that a pid is on a certain node? Or rather, how do you know when a node does not have a cache for a certain key?
+
+Might want a module-based dynamic supervisor to see if it has local children.
+
+And then we can maybe start it.
+
+Every time a Worker is started, we can replicate the state to all the members.
+
+
 
 ## Installation
 
