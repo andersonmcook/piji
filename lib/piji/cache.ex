@@ -3,7 +3,9 @@ defmodule Piji.Cache do
   Contains functionality for reading, updating, and deleting values from the cache.
   """
 
-  alias __MODULE__.{Follower, Leader}
+  alias __MODULE__.Worker
+
+  @fake_data_store Map.new(1..3, &{&1, :rand.uniform()})
 
   @doc """
   Deletes data from the cache if the cache exists.
@@ -23,13 +25,12 @@ defmodule Piji.Cache do
   def get(id) do
     case :pg.get_local_members(id) do
       [] ->
-        case DynamicSupervisor.start_child(Piji.DynamicSupervisor, {Leader, id}) do
-          {:error, :no_data} -> :no_data
-          {:ok, pid} -> Leader.get_data(pid)
-        end
+        id
+        |> fetch_data()
+        |> maybe_start_cache()
 
       [pid | _] ->
-        Follower.get_data(pid)
+        Worker.get_data(pid)
     end
   end
 
@@ -40,7 +41,20 @@ defmodule Piji.Cache do
   def update(id, data) do
     case :pg.get_members(id) do
       [] -> :not_cached
-      members -> Enum.each(members, &GenServer.cast(&1, {:update, data, DateTime.utc_now()}))
+      members -> Enum.each(members, &GenServer.cast(&1, {:update, data}))
     end
+  end
+
+  defp fetch_data(id) do
+    {id, Map.get(@fake_data_store, id)}
+  end
+
+  defp maybe_start_cache({_, nil}) do
+    nil
+  end
+
+  defp maybe_start_cache({id, data}) do
+    DynamicSupervisor.start_child(Piji.DynamicSupervisor, {Worker, %{data: data, id: id}})
+    data
   end
 end
