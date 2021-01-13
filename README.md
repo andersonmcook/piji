@@ -12,6 +12,10 @@ And then we can maybe start it.
 
 Every time a Worker is started, we can replicate the state to all the members.
 
+- [ ] Once a value is written to the cache, all nodes will have a copy
+- [ ] Whenever a node goes down and comes back up and a cache request is made at that node, it will have a copy again
+- [ ] When the cache is updated at one node, it will be updated at all nodes
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
