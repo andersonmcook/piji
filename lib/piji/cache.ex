@@ -23,6 +23,7 @@ defmodule Piji.Cache do
   """
   @spec get(any) :: any
   def get(id) do
+    # TODO: Maybe get the global members if we're pretending that it's better to hit the cache first?
     case :pg.get_local_members(id) do
       [] ->
         id
@@ -41,7 +42,7 @@ defmodule Piji.Cache do
   def update(id, data) do
     case :pg.get_members(id) do
       [] -> :not_cached
-      members -> Enum.each(members, &GenServer.cast(&1, {:update, data}))
+      members -> Enum.each(members, &Worker.update(&1, data))
     end
   end
 
@@ -54,7 +55,29 @@ defmodule Piji.Cache do
   end
 
   defp maybe_start_cache({id, data}) do
-    DynamicSupervisor.start_child(Piji.DynamicSupervisor, {Worker, %{data: data, id: id}})
+    Task.start(fn ->
+      case :pg.get_members(id) do
+        [] ->
+          :rpc.multicall(DynamicSupervisor, :start_child, [
+            Piji.DynamicSupervisor,
+            {Worker, %{data: data, id: id}}
+          ])
+
+        workers ->
+          # Update existing workers
+          Enum.each(workers, &Worker.update(&1, data))
+
+          # Start missing workers
+          workers
+          |> Enum.reduce(MapSet.new([Node.self() | Node.list()]), &MapSet.delete(&2, node(&1)))
+          |> MapSet.to_list()
+          |> :rpc.multicall(DynamicSupervisor, :start_child, [
+            Piji.DynamicSupervisor,
+            {Worker, %{data: data, id: id}}
+          ])
+      end
+    end)
+
     data
   end
 end

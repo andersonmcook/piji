@@ -16,46 +16,29 @@ defmodule Piji.Cache.Worker do
   end
 
   @doc false
-  def replicate(pid, state) do
-    GenServer.cast(pid, {:replicate, state})
+  def update(pid, data) do
+    GenServer.cast(pid, {:update, data})
   end
 
   @impl GenServer
   def init(state) do
     Logger.info("Starting cache for ID: #{state.id} on #{node()}")
-    {:ok, state, {:continue, :init}}
+    {:ok, state, {:continue, :join}}
   end
 
   @impl GenServer
-  def handle_continue(:init, state) do
-    case :pg.get_members(state.id) do
-      [] ->
-        Node.list()
-        |> Enum.reject(&(&1 == node()))
-        |> :rpc.multicall(DynamicSupervisor, :start_child, [
-          Piji.DynamicSupervisor,
-          {__MODULE__, state}
-        ])
-
-      workers ->
-        Enum.each(workers, &replicate(&1, state))
-    end
-
+  def handle_continue(:join, state) do
     :pg.join(state.id, self())
 
     {:noreply, state}
   end
 
   @impl GenServer
-  def handle_call(:get_data, _from, state) do
+  def handle_call(:get_data, _, state) do
     {:reply, state.data, state}
   end
 
   @impl GenServer
-  def handle_cast({:replicate, state}, _) do
-    {:noreply, state}
-  end
-
   def handle_cast({:update, data}, state) do
     {:noreply, %{state | data: data}}
   end
