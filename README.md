@@ -16,6 +16,18 @@ Every time a Worker is started, we can replicate the state to all the members.
 - [ ] Whenever a node goes down and comes back up and a cache request is made at that node, it will have a copy again
 - [ ] When the cache is updated at one node, it will be updated at all nodes
 
+## Running
+
+``` sh
+iex --sname a --cookie hey -S mix
+```
+
+``` sh
+iex --sname b --cookie hey -S mix
+```
+
+Get something from the cache. Make an update. Restart a node. Get something from the cache on the fresh node.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
