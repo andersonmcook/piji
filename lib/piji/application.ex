@@ -17,9 +17,11 @@ defmodule Piji.Application do
   end
 
   defp topologies do
+    {:ok, hostname} = :inet.gethostname()
+
     [
       default: [
-        config: [hosts: [:"a@Andersons-MBP", :"b@Andersons-MBP"]],
+        config: [hosts: Enum.map(~w(a b)a, &:"#{&1}@#{hostname}")],
         strategy: Cluster.Strategy.Epmd
       ]
     ]
