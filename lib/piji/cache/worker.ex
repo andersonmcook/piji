@@ -29,7 +29,6 @@ defmodule Piji.Cache.Worker do
   @impl GenServer
   def handle_continue(:join, state) do
     :pg.join(state.id, self())
-
     {:noreply, state}
   end
 

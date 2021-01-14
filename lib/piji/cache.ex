@@ -23,15 +23,38 @@ defmodule Piji.Cache do
   """
   @spec get(any) :: any
   def get(id) do
-    # TODO: Maybe get the global members if we're pretending that it's better to hit the cache first?
-    case :pg.get_local_members(id) do
+    case :pg.get_members(id) do
+      # First request on the cluster
       [] ->
-        id
-        |> fetch_data()
-        |> maybe_start_cache()
+        case Map.get(@fake_data_store, id) do
+          nil ->
+            nil
 
-      [pid | _] ->
-        Worker.get_data(pid)
+          data ->
+            Task.start(fn ->
+              :rpc.multicall(DynamicSupervisor, :start_child, [
+                Piji.DynamicSupervisor,
+                {Worker, %{data: data, id: id}}
+              ])
+            end)
+
+            data
+        end
+
+      # Subsequent requests
+      [worker | _] = workers ->
+        data = Worker.get_data(worker)
+
+        Task.start(fn ->
+          # TODO: over-optimization?
+          # Ensure all workers have the same data
+          # Enum.each(workers, &Worker.update(&1, data))
+
+          # Start missing workers
+          start_missing_workers(workers, %{data: data, id: id})
+        end)
+
+        data
     end
   end
 
@@ -41,43 +64,22 @@ defmodule Piji.Cache do
   @spec update(any, any) :: :not_cached | :ok
   def update(id, data) do
     case :pg.get_members(id) do
-      [] -> :not_cached
-      members -> Enum.each(members, &Worker.update(&1, data))
+      [] ->
+        :not_cached
+
+      workers ->
+        start_missing_workers(workers, %{data: data, id: id})
+        Enum.each(workers, &Worker.update(&1, data))
     end
   end
 
-  defp fetch_data(id) do
-    {id, Map.get(@fake_data_store, id)}
-  end
-
-  defp maybe_start_cache({_, nil}) do
-    nil
-  end
-
-  defp maybe_start_cache({id, data}) do
-    Task.start(fn ->
-      case :pg.get_members(id) do
-        [] ->
-          :rpc.multicall(DynamicSupervisor, :start_child, [
-            Piji.DynamicSupervisor,
-            {Worker, %{data: data, id: id}}
-          ])
-
-        workers ->
-          # Update existing workers
-          Enum.each(workers, &Worker.update(&1, data))
-
-          # Start missing workers
-          workers
-          |> Enum.reduce(MapSet.new([Node.self() | Node.list()]), &MapSet.delete(&2, node(&1)))
-          |> MapSet.to_list()
-          |> :rpc.multicall(DynamicSupervisor, :start_child, [
-            Piji.DynamicSupervisor,
-            {Worker, %{data: data, id: id}}
-          ])
-      end
-    end)
-
-    data
+  defp start_missing_workers(workers, args) do
+    workers
+    |> Enum.reduce(MapSet.new([Node.self() | Node.list()]), &MapSet.delete(&2, node(&1)))
+    |> MapSet.to_list()
+    |> :rpc.multicall(DynamicSupervisor, :start_child, [
+      Piji.DynamicSupervisor,
+      {Worker, args}
+    ])
   end
 end
