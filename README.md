@@ -2,6 +2,9 @@
 
 Distributed cache using Erlang's `pg`.
 
+[pg](https://erlang.org/doc/man/pg.html)
+[pg Source](https://github.com/erlang/otp/blob/master/lib/kernel/src/pg.erl)
+
 ## TODO
 
 How do you know that a pid is on a certain node? Or rather, how do you know when a node does not have a cache for a certain key?
