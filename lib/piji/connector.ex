@@ -5,7 +5,7 @@ defmodule Piji.Connector do
 
   Start a new node with the same cookie.
   From another node:
-  `Process.send({Piji.Connector, :"new@Andersons-MBP"}, self(), [])`
+  `Process.send({Piji.Connector, :"new@your-host"}, self(), [])`
   `flush`
   """
 
@@ -22,7 +22,7 @@ defmodule Piji.Connector do
 
   @impl true
   def handle_info(from, state) when is_pid(from) do
-    IO.puts("Received message")
+    IO.puts("Received message from #{node(from)}")
     Process.send(from, "Hello from Connector on #{node()}", [])
     {:noreply, state}
   end
