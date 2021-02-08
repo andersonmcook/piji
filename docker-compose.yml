@@ -1,0 +1,27 @@
+services:
+  a:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: elixir --sname a --cookie $COOKIE -S mix run --no-halt
+    environment:
+      DOCKER: "true"
+    ports:
+      - 4000:4000
+    volumes:
+      - a:/lib
+  b:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: elixir --sname b --cookie $COOKIE -S mix run --no-halt
+    environment:
+      DOCKER: "true"
+    ports:
+      - 4001:4000
+    volumes:
+      - b:/lib
+version: "3"
+volumes:
+  a:
+  b:

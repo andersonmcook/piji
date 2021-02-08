@@ -32,6 +32,13 @@ iex --sname b --cookie hey -S mix
 Get something from the cache. Make an update. Restart a node. Get something from the cache on the fresh node.
 
 
+## Running in Docker
+``` sh
+docker-compose up
+# In a separate tab
+curl http:localhost:4000/1
+```
+
 ## Caveats
 
 The Piji.Cache module makes the assumption that any connected nodes are the same application/has the same functions.

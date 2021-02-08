@@ -22,7 +22,9 @@ defmodule Piji.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:libcluster, "~> 3.2"}
+      {:jason, "~> 1.2"},
+      {:libcluster, "~> 3.2"},
+      {:plug_cowboy, "~> 2.0"}
     ]
   end
 end
