@@ -5,7 +5,7 @@ defmodule Piji.Cache do
 
   alias __MODULE__.Worker
 
-  @fake_data_store Map.new(1..3, &{&1, :rand.uniform()})
+  @fake_data_store Map.new(1..3, &{to_string(&1), :rand.uniform()})
 
   @doc """
   Deletes data from the cache if the cache exists.

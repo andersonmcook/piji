@@ -5,15 +5,16 @@ defmodule PijiWeb.Router do
   plug :dispatch
 
   get "/:id" do
-    with {id, ""} <- Integer.parse(conn.params["id"]),
-         value when not is_nil(value) <- Piji.Cache.get(id),
-         {:ok, value} = Jason.encode(value) do
-      conn
-      |> put_resp_header("content-type", "application/json")
-      |> send_resp(200, value)
-    else
-      nil -> send_resp(conn, 404, "Not found")
-      _ -> send_resp(conn, 400, "Bad Request")
+    conn.params["id"]
+    |> Piji.Cache.get()
+    |> case do
+      nil ->
+        send_resp(conn, 404, "Not found")
+
+      value ->
+        conn
+        |> put_resp_header("content-type", "application/json")
+        |> send_resp(200, Jason.encode!(value))
     end
   end
 end
