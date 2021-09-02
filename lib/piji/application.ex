@@ -10,7 +10,10 @@ defmodule Piji.Application do
       {Cluster.Supervisor, [topologies(), [name: Piji.ClusterSupervisor]]},
       %{id: Piji.ProcessGroup, start: {:pg, :start_link, []}},
       {DynamicSupervisor, strategy: :one_for_one, name: Piji.DynamicSupervisor},
-      Piji.Connector
+      Piji.Connector,
+      Piji.Tracer,
+      %{id: :sender_a, start: {Piji.Sender, :start_link, [:sender_a]}},
+      %{id: :sender_b, start: {Piji.Sender, :start_link, [:sender_b]}}
     ]
 
     opts = [strategy: :one_for_one, name: Piji.Supervisor]
