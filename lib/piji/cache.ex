@@ -32,7 +32,7 @@ defmodule Piji.Cache do
 
           data ->
             Task.start(fn ->
-              :rpc.multicall(DynamicSupervisor, :start_child, [
+              :erpc.multicall([Node.self() | Node.list()], DynamicSupervisor, :start_child, [
                 Piji.DynamicSupervisor,
                 {Worker, %{data: data, id: id}}
               ])
@@ -42,6 +42,7 @@ defmodule Piji.Cache do
         end
 
       # Subsequent requests
+      # TODO: get data from the worker on this node
       [worker | _] = workers ->
         data = Worker.get_data(worker)
 
@@ -77,7 +78,7 @@ defmodule Piji.Cache do
     workers
     |> Enum.reduce(MapSet.new([Node.self() | Node.list()]), &MapSet.delete(&2, node(&1)))
     |> MapSet.to_list()
-    |> :rpc.multicall(DynamicSupervisor, :start_child, [
+    |> :erpc.multicall(DynamicSupervisor, :start_child, [
       Piji.DynamicSupervisor,
       {Worker, args}
     ])
