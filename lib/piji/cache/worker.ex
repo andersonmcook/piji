@@ -5,6 +5,8 @@ defmodule Piji.Cache.Worker do
 
   require Logger
 
+  @timeout :timer.minutes(1)
+
   @doc false
   def start_link(state) do
     GenServer.start_link(__MODULE__, state)
@@ -29,16 +31,16 @@ defmodule Piji.Cache.Worker do
   @impl GenServer
   def handle_continue(:join, state) do
     :pg.join(state.id, self())
-    {:noreply, state}
+    {:noreply, state, @timeout}
   end
 
   @impl GenServer
   def handle_call(:get_data, _, state) do
-    {:reply, state.data, state}
+    {:reply, state.data, state, @timeout}
   end
 
   @impl GenServer
   def handle_cast({:update, data}, state) do
-    {:noreply, %{state | data: data}}
+    {:noreply, %{state | data: data}, @timeout}
   end
 end
