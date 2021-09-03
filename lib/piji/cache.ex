@@ -3,7 +3,7 @@ defmodule Piji.Cache do
   Contains functionality for reading, updating, and deleting values from the cache.
   """
 
-  alias __MODULE__.Worker
+  alias __MODULE__.{Replicator, Worker}
 
   @fake_data_store Map.new(1..3, &{to_string(&1), :rand.uniform()})
 
@@ -31,13 +31,7 @@ defmodule Piji.Cache do
             nil
 
           data ->
-            Task.start(fn ->
-              :erpc.multicall([Node.self() | Node.list()], DynamicSupervisor, :start_child, [
-                Piji.DynamicSupervisor,
-                {Worker, %{data: data, id: id}}
-              ])
-            end)
-
+            Replicator.start_all(id, data)
             data
         end
 
@@ -52,7 +46,7 @@ defmodule Piji.Cache do
           # Enum.each(workers, &Worker.update(&1, data))
 
           # Start missing workers
-          start_missing_workers(workers, %{data: data, id: id})
+          Replicator.start_missing(workers, id, data)
         end)
 
         data
@@ -69,18 +63,8 @@ defmodule Piji.Cache do
         :not_cached
 
       workers ->
-        start_missing_workers(workers, %{data: data, id: id})
+        Replicator.start_missing(workers, id, data)
         Enum.each(workers, &Worker.update(&1, data))
     end
-  end
-
-  defp start_missing_workers(workers, args) do
-    workers
-    |> Enum.reduce(MapSet.new([Node.self() | Node.list()]), &MapSet.delete(&2, node(&1)))
-    |> MapSet.to_list()
-    |> :erpc.multicall(DynamicSupervisor, :start_child, [
-      Piji.DynamicSupervisor,
-      {Worker, args}
-    ])
   end
 end
